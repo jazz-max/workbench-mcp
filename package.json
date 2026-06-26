@@ -1,0 +1,17 @@
+{
+  "name": "workbench-mcp",
+  "version": "1.0.0",
+  "description": "Remote-access MCP server: lets a Claude CLI on another machine read/write files, search code, run allow-listed commands and git over HTTP for a project.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "zod": "^3.25.0"
+  }
+}
