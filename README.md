@@ -1,139 +1,145 @@
 # Workbench MCP Server
 
-MCP-сервер для **удалённого доступа к проекту по сети**. Позволяет Claude CLI с
-другого компьютера читать/писать файлы, искать код, запускать allow-listed
-команды и работать с git в контексте указанного проекта — а также запускать
-Claude CLI на хост-машине в фоне (`claude_start`).
+An MCP server for **remote access to a project over the network**. It lets a
+Claude CLI running on another machine read/write files, search code, run
+allow-listed commands and work with git in the context of a chosen project — and
+also launch a Claude CLI on the host machine in the background (`claude_start`).
 
-Изначально написан для [Workbench](https://github.com/jazz-max/workbench), но работает с любым проектом — путь задаётся через `MCP_PROJECT_ROOT`.
+Originally built for [Workbench](https://github.com/jazz-max/workbench), but it
+works with any project — the path is set via `MCP_PROJECT_ROOT`.
 
-## Быстрый старт
+## Quick start
 
 ```bash
-git clone <repo-url> workbench-mcp && cd workbench-mcp
+git clone https://github.com/jazz-max/workbench-mcp.git && cd workbench-mcp
 npm install
 cp .env.example .env
-# отредактируй .env: задай MCP_AUTH_TOKEN и MCP_PROJECT_ROOT
+# edit .env: set MCP_AUTH_TOKEN and MCP_PROJECT_ROOT
 npm start
 ```
 
-Вывод при успешном запуске:
+On a successful start you'll see:
 ```
 MCP server listening on http://0.0.0.0:3100/mcp (auth enabled)
 Project root: /path/to/your/project
 ```
 
-### Установка через npm / npx
+### Install via npm / npx
 
-Без клонирования репозитория:
+Without cloning the repository:
 
 ```bash
-# разовый запуск без установки
-MCP_AUTH_TOKEN=<токен> MCP_PROJECT_ROOT=/путь/к/проекту npx workbench-mcp
+# one-off run, no install
+MCP_AUTH_TOKEN=<token> MCP_PROJECT_ROOT=/path/to/project npx workbench-mcp
 
-# или поставить глобально
+# or install globally
 npm install -g workbench-mcp
-MCP_AUTH_TOKEN=<токен> MCP_PROJECT_ROOT=/путь/к/проекту workbench-mcp
+MCP_AUTH_TOKEN=<token> MCP_PROJECT_ROOT=/path/to/project workbench-mcp
 ```
 
-> При запуске через `npx`/глобально файла `.env` рядом с сервером нет — задавай
-> настройки **переменными окружения** напрямую. `MCP_PROJECT_ROOT` в этом случае
-> **обязателен** (иначе сервер не поймёт, какой проект обслуживать).
+> When run via `npx`/global install there is no `.env` next to the server — set
+> the configuration via **environment variables** directly. In this case
+> `MCP_PROJECT_ROOT` is **required** (otherwise the server doesn't know which
+> project to serve).
 
-### Запуск через pm2 (рекомендуется для постоянной работы)
+### Run via pm2 (recommended for long-running use)
 
 ```bash
 pm2 start server.mjs --name workbench-mcp
 pm2 save
-pm2 startup          # автозапуск при перезагрузке (один раз)
+pm2 startup          # start on boot (one-time)
 
-pm2 logs workbench-mcp     # логи
-pm2 restart workbench-mcp  # перезапуск после изменений
+pm2 logs workbench-mcp     # logs
+pm2 restart workbench-mcp  # restart after changes
 ```
 
-## Конфигурация (`.env`)
+## Configuration (`.env`)
 
-| Переменная | По умолчанию | Описание |
-|------------|-------------|----------|
-| `MCP_PORT` | `3100` | Порт сервера |
-| `MCP_AUTH_TOKEN` | *(пусто)* | Bearer-токен. **Без токена — доступ без авторизации** (только для доверенной локальной сети) |
-| `MCP_PROJECT_ROOT` | родительская папка | Абсолютный путь к проекту, который обслуживает сервер |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_PORT` | `3100` | Server port |
+| `MCP_AUTH_TOKEN` | *(empty)* | Bearer token. **Without a token the server runs without authentication** (use only on a trusted local network) |
+| `MCP_PROJECT_ROOT` | parent directory | Absolute path to the project the server serves |
 
-Сгенерировать токен: `node -e "console.log(crypto.randomUUID())"`
+Generate a token: `node -e "console.log(crypto.randomUUID())"`
 
-## Подключение Claude CLI (с другого компьютера)
+## Connecting Claude CLI (from another machine)
 
 ```bash
-# IP хоста (macOS): ipconfig getifaddr en0
+# host IP (macOS): ipconfig getifaddr en0
 claude mcp add workbench \
   --transport http \
   --url http://<IP>:3100/mcp \
-  --header "Authorization: Bearer <ТОКЕН_ИЗ_.env>"
+  --header "Authorization: Bearer <TOKEN_FROM_.env>"
 
-claude mcp list      # проверить
+claude mcp list      # verify
 claude mcp remove workbench
 ```
 
-## Инструменты
+## Tools
 
-| Инструмент | Описание |
-|------------|----------|
-| `project_info` | Обзор проекта: `CLAUDE.md`, список сервлетов (если есть `servlets.json`), `docs/`, текущая ветка |
-| `read_file` | Чтение файла (путь относительно корня проекта), до 1 MB, с номерами строк |
-| `write_file` | Запись файла (создаёт директории). Запрещено: `.env*`, `node_modules/`, `vendor/` |
-| `list_files` | Листинг директории (опц. рекурсивный, фильтр по имени), до 500 записей |
-| `search_code` | Поиск по содержимому (regex/grep), фильтр по glob, исключает `node_modules/vendor/.git/storage/public` |
-| `run_command` | Команда из allowlist, `execFile` (без shell), таймаут 30с, вывод до 1 MB |
-| `git_status` | Текущая ветка, `git status --porcelain`, последние 10 коммитов |
-| `claude_start` | Запуск `claude -p` в фоне с промптом → возвращает `taskId` |
-| `claude_result` | Статус и результат фоновой задачи по `taskId` (`running`/`done`/`error`) |
+| Tool | Description |
+|------|-------------|
+| `project_info` | Project overview: `CLAUDE.md`, servlet list (if `servlets.json` exists), `docs/`, current branch |
+| `read_file` | Read a file (path relative to project root), up to 1 MB, with line numbers |
+| `write_file` | Write a file (creates directories). Forbidden: `.env*`, `node_modules/`, `vendor/` |
+| `list_files` | List a directory (optionally recursive, name filter), up to 500 entries |
+| `search_code` | Search by content (regex/grep), glob filter, excludes `node_modules/vendor/.git/storage/public` |
+| `run_command` | A command from the allowlist, `execFile` (no shell), 30s timeout, output up to 1 MB |
+| `git_status` | Current branch, `git status --porcelain`, last 10 commits |
+| `claude_start` | Launch `claude -p` in the background with a prompt → returns a `taskId` |
+| `claude_result` | Status and result of a background task by `taskId` (`running`/`done`/`error`) |
 
-**allowlist для `run_command`:** `git, php, composer, npm, node, npx, ls, cat, head, tail, find, grep, rg, wc, diff, file, which, pwd, echo`
+**allowlist for `run_command`:** `git, php, composer, npm, node, npx, ls, cat, head, tail, find, grep, rg, wc, diff, file, which, pwd, echo`
 
-## Сценарий: удалённая разработка с двух машин
+## Scenario: remote development from two machines
 
-**Машина A** — проект и MCP-сервер. **Машина B** — Claude CLI для исследования.
+**Machine A** — the project and the MCP server. **Machine B** — the Claude CLI for exploration.
 
 ```
-                    LAN (порт 3100)
-  Машина B  ──────────────────────>  Машина A
-  Claude CLI                         MCP-сервер
-  (исследование, спеки)              (файлы проекта, git, команды)
+                    LAN (port 3100)
+  Machine B  ──────────────────────>  Machine A
+  Claude CLI                          MCP server
+  (research, specs)                   (project files, git, commands)
 ```
 
-> **Важно:** [Claude Code CLI](https://docs.claude.com/claude-code) должен стоять на **обеих** машинах — на B как клиент, который подключается к MCP-серверу и драйвит работу, и на A, где `claude_start` запускает Claude локально на хосте для кодинга.
+> **Note:** [Claude Code CLI](https://docs.claude.com/claude-code) must be
+> installed on **both** machines — on B as the client that connects to the MCP
+> server and drives the work, and on A, where `claude_start` runs Claude locally
+> on the host for coding.
 
-Типичный поток для нового сервлета:
+A typical flow for a new feature:
 
-1. На машине A запущен MCP-сервер.
-2. На машине B в Claude CLI:
+1. The MCP server is running on machine A.
+2. In the Claude CLI on machine B:
    ```
-   > Используй project_info, чтобы понять структуру проекта
-   > Прочитай app/Servlets/BaseServlet.php — базовый класс
-   > Прочитай app/Servlets/DemoBooksScraper.php — пример сервлета
-   > Исследуй сайт example.com и напиши спецификацию в docs/spec.md
+   > Use project_info to understand the project structure
+   > Read app/Servlets/BaseServlet.php — the base class
+   > Read app/Servlets/DemoBooksScraper.php — an example
+   > Research example.com and write a spec to docs/spec.md
    ```
-3. Не переключаясь на машину A, просто попроси своего Claude делегировать кодинг хосту:
+3. Without switching to machine A, ask your Claude to delegate the coding to the host:
    ```
-   > Попроси claude на верстаке закодить парсер по спеке docs/spec.md
+   > Ask claude on the workbench to write the parser per docs/spec.md
    ```
-   Claude на машине B вызовет `claude_start` → на машине A («верстаке») запустится
-   отдельный Claude CLI, который напишет код. Результат заберёшь через `claude_result`.
+   Claude on machine B calls `claude_start` → a separate Claude CLI launches on
+   machine A ("the workbench") and writes the code. Collect the result via
+   `claude_result`.
 
-## Безопасность
+## Security
 
-- Запросы защищены Bearer-токеном (`MCP_AUTH_TOKEN`). Без токена сервер работает **без авторизации** — открывай его только в доверенной сети.
-- `run_command` ограничен allowlist и использует `execFile` (без shell-инъекций).
-- `write_file` запрещает запись в `.env*`, `node_modules/`, `vendor/`.
-- Сервер даёт удалённый доступ к файлам и выполнению команд — **не выставляй его в публичный интернет** без отдельного reverse-proxy с TLS и аутентификацией.
+- Requests are protected by a Bearer token (`MCP_AUTH_TOKEN`). Without a token the server runs **without authentication** — only expose it on a trusted network.
+- `run_command` is restricted to an allowlist and uses `execFile` (no shell injection).
+- `write_file` forbids writing to `.env*`, `node_modules/`, `vendor/`.
+- The server grants remote access to files and command execution — **do not expose it to the public internet** without a separate reverse proxy with TLS and authentication.
 
-## Устранение проблем
+## Troubleshooting
 
-- **Cannot connect:** обе машины в одной сети; проверь IP; `curl http://localhost:3100/mcp` должен вернуть 405; проверь firewall (macOS может спросить разрешение для Node.js).
-- **Unauthorized:** токен в `--header` должен совпадать с `MCP_AUTH_TOKEN`.
-- **Command not allowed:** команда не в allowlist.
-- **Порт занят:** `lsof -ti:3100 | xargs kill -9`.
+- **Cannot connect:** both machines on the same network; check the IP; `curl http://localhost:3100/mcp` should return 405; check the firewall (macOS may ask to allow Node.js).
+- **Unauthorized:** the token in `--header` must match `MCP_AUTH_TOKEN`.
+- **Command not allowed:** the command is not in the allowlist.
+- **Port in use:** `lsof -ti:3100 | xargs kill -9`.
 
-## Лицензия
+## License
 
 [MIT](LICENSE).
