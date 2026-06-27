@@ -1,0 +1,27 @@
+name: Publish to npm
+
+# Публикует пакет в npm по тегу версии (vX.Y.Z) или вручную из UI.
+# Требуется секрет репозитория NPM_TOKEN (npm Automation token):
+#   npmjs.com → Access Tokens → Generate → Automation
+#   GitHub → Settings → Secrets and variables → Actions → New repository secret: NPM_TOKEN
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch: # ручной запуск из GitHub UI
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
