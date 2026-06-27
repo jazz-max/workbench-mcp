@@ -23,6 +23,23 @@ MCP server listening on http://0.0.0.0:3100/mcp (auth enabled)
 Project root: /path/to/your/project
 ```
 
+### Установка через npm / npx
+
+Без клонирования репозитория:
+
+```bash
+# разовый запуск без установки
+MCP_AUTH_TOKEN=<токен> MCP_PROJECT_ROOT=/путь/к/проекту npx workbench-mcp
+
+# или поставить глобально
+npm install -g workbench-mcp
+MCP_AUTH_TOKEN=<токен> MCP_PROJECT_ROOT=/путь/к/проекту workbench-mcp
+```
+
+> При запуске через `npx`/глобально файла `.env` рядом с сервером нет — задавай
+> настройки **переменными окружения** напрямую. `MCP_PROJECT_ROOT` в этом случае
+> **обязателен** (иначе сервер не поймёт, какой проект обслуживать).
+
 ### Запуск через pm2 (рекомендуется для постоянной работы)
 
 ```bash
