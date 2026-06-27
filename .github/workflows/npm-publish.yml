@@ -1,13 +1,22 @@
 name: Publish to npm
 
 # Публикует пакет в npm по тегу версии (vX.Y.Z) или вручную из UI.
-# Требуется секрет репозитория NPM_TOKEN (npm Automation token):
-#   npmjs.com → Access Tokens → Generate → Automation
-#   GitHub → Settings → Secrets and variables → Actions → New repository secret: NPM_TOKEN
+#
+# Используется Trusted Publishing (OIDC) — БЕЗ долгоживущего токена.
+# Предварительно нужно один раз:
+#   1) опубликовать пакет вручную (npm login && npm publish) — OIDC не работает
+#      для самого первого релиза нового пакета;
+#   2) на npmjs.com в настройках пакета добавить Trusted Publisher:
+#      provider = GitHub Actions, repository = jazz-max/workbench-mcp,
+#      workflow filename = npm-publish.yml.
 on:
   push:
     tags: ['v*.*.*']
   workflow_dispatch: # ручной запуск из GitHub UI
+
+permissions:
+  contents: read
+  id-token: write # нужно для OIDC
 
 jobs:
   publish:
@@ -17,11 +26,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+
+      # Trusted Publishing требует npm >= 11.5.1
+      - run: npm install -g npm@latest
 
       - run: npm ci
 
+      # Токен не нужен: npm publish сам использует OIDC при настроенном Trusted Publisher
       - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
